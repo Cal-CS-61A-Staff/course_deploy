@@ -1,0 +1,38 @@
+server:
+  port: 5303
+
+repo:
+  # Name of the repo on GitHub
+  github: TODO
+  # Name of the bot used for deployment
+  bot_user: TODO
+  # Used to make API requests as the bot user
+  access_token: TODO
+  # Used to verify that webhooks came from GitHub
+  webhook_secret: TODO
+  # Local directory where this repo is cloned
+  local_directory: /home/cs61a/course_deploy_files/repo/
+  # Context to use for reported statuses.
+  status_context: "Website Builder"
+
+build:
+  domain: build.cs61a.org
+  script: /home/jathak/code/course_deploy_files/build.sh
+  # After running the script, the built website should be here.
+  location: /home/cs61a/course_deploy_files/repo/published/
+
+# Each time a pull request is made or updated, it will be built into built-prs
+pull_requests:
+  root_domain: pullrequests.cs61a.org
+  # Where PR builds are stored
+  directory: /home/cs61a/course_deploy_files/built-prs/
+
+deploy:
+  branch: master
+  # Where deploy builds are stored
+  directory: /home/cs61a/course_deploy_files/website/
+
+
+staging:
+  # Where staged assignment are symlinked.
+  directory: /home/cs61a/course_deploy_files/staging/
