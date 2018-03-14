@@ -1,5 +1,7 @@
 # course_deploy
 
+(WIP, most of this isn't true yet)
+
 A simple build server designed to deploy a course website. Combined with some
 Caddy configs, it's designed to build and host the following:
 
