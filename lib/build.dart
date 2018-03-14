@@ -79,8 +79,8 @@ deleteBranch(String branch) async {
   var hash = branchHash(branch);
   await repoShell('rm -r ${config.prDirectory}$hash', null);
   await repoShell('rm ${config.prDirectory}$hash.log', null);
-  int code = await repoShell('git branch -d $branch', null);
-  if (code != 0) print('Issue deleting branch $branch');
+  int code = await repoShell('git branch -D $branch', null);
+  if (code != 0) print("Couldn't deleting branch $branch");
 }
 
 queueBuild(QueuedBuild build) {
