@@ -1,3 +1,5 @@
+import 'dart:convert' show JSON;
+
 import 'package:course_deploy/config.dart';
 
 import 'package:github/server.dart';
@@ -42,7 +44,20 @@ makeBuildComment(int number, String deployUrl) async {
       "I'll continue to build as you push new changes. "
       "If something isn't working, you can check the [log]($deployUrl/.log). "
       "These links will continue to work until you close this PR.\n\n"
-      "> This bot is in beta. Let Jen know if you encounter issues with it.";
+      "> Let Jen know if you encounter issues with the build bot.";
   await _github.issues.createComment(_repo, number, body);
   print('Made build comment on #$number');
+}
+
+editDeletedBuildComment(int number) async {
+  await for (IssueComment comment
+      in _github.issues.listCommentsByIssue(_repo, number)) {
+    if (comment.user.login == config.botUser) {
+      await _github.request(
+          "PATCH", '/repos/${_repo.fullName}/issues/comments/${comment.id}',
+          body: JSON.encode({
+            'body': "This PR has been closed and the build has been deleted."
+          }));
+    }
+  }
 }

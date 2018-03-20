@@ -174,6 +174,7 @@ handleEvent(String event, String contents) {
     String branch = data['pull_request']['head']['ref'];
     print('PR closed. Deleting $branch...');
     deleteBranch(branch);
+    github.editDeletedBuildComment(data['number']);
   }
 }
 
