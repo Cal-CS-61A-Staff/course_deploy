@@ -144,7 +144,7 @@ handle(HttpRequest request) async {
 handleEvent(String event, String contents) {
   var data = JSON.decode(contents);
   if (event == 'push' &&
-      data['ref'] == 'ref/heads/${config.deployBranch}' &&
+      data['ref'] == 'refs/heads/${config.deployBranch}' &&
       data['repository']['full_name'] == config.githubRepo) {
     print('Queueing deploy...');
     queueBuild(new QueuedBuild(
