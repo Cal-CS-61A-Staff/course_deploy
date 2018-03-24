@@ -34,5 +34,7 @@ class DeployConfig {
 
   String get botUser => _yaml['repo']['bot_user'];
 
+  String get slackHook => _yaml['deploy']['slack_hook'];
+
   String _end(String path) => path.endsWith('/') ? path : '$path/';
 }

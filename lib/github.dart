@@ -1,4 +1,5 @@
 import 'dart:convert' show JSON;
+import 'dart:io';
 
 import 'package:course_deploy/config.dart';
 
@@ -60,4 +61,21 @@ editDeletedBuildComment(int number) async {
           }));
     }
   }
+}
+
+postToSlack(String ref) async {
+  if (config.slackHook == null) return;
+  GitCommit commit = await _github.git.getCommit(_repo, ref);
+  if (commit == null) {
+    print('Could not find ref $ref');
+    return;
+  }
+  String url = "https://github.com/${_repo.fullName}/commit/$ref";
+  String msg = "*Deploy complete!*\n<$url|`${commit.sha.substring(0, 8)}`> - " +
+      commit.message.split('\n').first;
+  HttpClientRequest request =
+      await new HttpClient().postUrl(Uri.parse(config.slackHook))
+        ..headers.contentType = ContentType.JSON
+        ..write(JSON.encode({'text': msg}));
+  await request.close();
 }

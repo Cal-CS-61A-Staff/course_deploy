@@ -72,6 +72,8 @@ run(QueuedBuild build) async {
   github.updateStatus(build.ref, 'success', 'Build successful!', build.url);
   if (build.pr != null) {
     github.makeBuildComment(build.pr, build.url);
+  } else {
+    github.postToSlack(build.ref);
   }
 }
 

@@ -8,11 +8,7 @@ The status will be reported back to GitHub. Once the PR is closed, the built
 files for it will be deleted.
 
 - The website will be built whenever code is pushed to master (or a
-different specified branch) - **not yet active**
-
-- A staging domain will be maintained that symlinks assignment directories so
-that they contain a build for either the latest open PR associated with that
-assignment or master if there is none. - **not yet implemented**
+different specified branch)
 
 For performance reasons, the Dart server is only used for the build queue and
-the PR subdomains. The deployed and staged sites are hosted by Caddy.
+the PR subdomains. The deployed site is hosted by Caddy.

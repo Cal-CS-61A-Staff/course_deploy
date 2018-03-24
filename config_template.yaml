@@ -31,8 +31,5 @@ deploy:
   branch: master
   # Where deploy builds are stored
   directory: /home/cs61a/course_deploy_files/website/
-
-
-staging:
-  # Where staged assignment are symlinked.
-  directory: /home/cs61a/course_deploy_files/staging/
+  # Slack Incoming Webhook URL (for notifications)
+  slack_hook: null
