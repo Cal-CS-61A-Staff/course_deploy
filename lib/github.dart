@@ -41,11 +41,7 @@ makeBuildComment(int number, String deployUrl) async {
       return;
     }
   }
-  var body = "I've built your PR for you [here]($deployUrl).\n\n"
-      "I'll continue to build as you push new changes. "
-      "If something isn't working, you can check the [log]($deployUrl/.log). "
-      "These links will continue to work until you close this PR.\n\n"
-      "> Let Jen know if you encounter issues with the build bot.";
+  var body = "[Build Complete!]($deployUrl) ([View Log]($deployUrl/.log)).";
   await _github.issues.createComment(_repo, number, body);
   print('Made build comment on #$number');
 }
