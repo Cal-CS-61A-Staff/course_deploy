@@ -31,10 +31,16 @@ init(DeployConfig c) {
   queue = new StreamController<QueuedBuild>();
   new Future(() async {
     await for (QueuedBuild build in queue.stream) {
-      var activeBuild = active.lookup(build);
-      if (identical(build, activeBuild)) {
-        active.remove(build);
-        await run(build);
+      try {
+        var activeBuild = active.lookup(build);
+        if (identical(build, activeBuild)) {
+          active.remove(build);
+          await run(build);
+        } else {
+          print('Skipping build for ${build.branch} ${build.ref}. Newer build queued'); 
+        }
+      } catch (e) {
+        print("Build for ${build.branch} ${build.ref} crashed builder (that shouldn't happen!)"); 
       }
     }
   });
@@ -86,7 +92,10 @@ deleteBranch(String branch) async {
 }
 
 queueBuild(QueuedBuild build) {
-  active.remove(build);
+  while(active.contains(build)) {
+    print('Deactivating existing queued build for branch ${build.branch} ${build.ref}');
+    active.remove(build);
+  }
   active.add(build);
   queue.add(build);
 }
@@ -161,8 +170,8 @@ handleEvent(String event, String contents) {
   } else if (event == 'pull_request' &&
       (data['action'] == 'opened' || data['action'] == 'synchronize') &&
       data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {
-    print('Queuing build for PR...');
     String branch = data['pull_request']['head']['ref'];
+    print('Queuing build for PR: $branch');
     String hash = branchHash(branch);
     queueBuild(new QueuedBuild(
         branch,
