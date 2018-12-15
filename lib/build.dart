@@ -49,7 +49,7 @@ init(DeployConfig c) {
 run(QueuedBuild build) async {
   var commands = [
     'git fetch origin ${build.branch}',
-    'git checkout ${build.branch}',
+    'git checkout -f ${build.branch}',
     'git reset --hard origin/${build.branch}',
     config.buildScript + ' ' + (build.url == null ? 'deploy' : 'pull'),
     'cp -r ${config.buildLocation} ${config.prDirectory}tmp',
