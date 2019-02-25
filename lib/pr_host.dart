@@ -15,6 +15,7 @@ handle(HttpRequest request) async {
   files.followLinks = true;
   var dir = new Directory('$root$subdomain${request.uri.path}');
   if (request.uri.path == '/.log') {
+    request.response.headers.contentType = new ContentType("text", "plain", charset: "utf-8");
     files.serveFile(new File('$root$subdomain.log'), request);
   } else if (await dir.exists()) {
     var path = dir.path;
