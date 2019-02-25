@@ -12,3 +12,7 @@ different specified branch)
 
 For performance reasons, the Dart server is only used for the build queue and
 the PR subdomains. The deployed site is hosted by Caddy.
+
+If for some reason you need to restart the build server manually, run:
+
+    sudo service course_deploy restart
