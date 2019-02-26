@@ -52,10 +52,9 @@ run(QueuedBuild build) async {
     ['git', 'checkout', '-f', build.branch],
     ['git', 'reset', '--hard', 'origin/${build.branch}'],
     [config.buildScript, build.url == null ? 'deploy' : 'pull'],
-    ['cp', '-r', config.buildLocation, '${config.prDirectory}tmp'],
-    ['mv', build.output, '${config.prDirectory}tmp2', '||', 'true'],
-    ['mv', '${config.prDirectory}tmp', build.output, '||', 'true'],
-    ['rm', '-r', '${config.prDirectory}tmp2', '||', 'true']
+    ['rm', '-r', '-f', '${config.prDirectory}tmp'],
+    ['mv', build.output, '${config.prDirectory}tmp'],
+    ['mv', config.buildLocation, build.output]
   ];
   IOSink log;
   if (build.url != null) {
