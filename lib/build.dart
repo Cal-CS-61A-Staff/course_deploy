@@ -109,7 +109,7 @@ repoShell(List<String> cmdArgs, IOSink log) async {
   }
   log?.writeln('\$ $cmd');
   var process = await Process.start(cmdArgs.first, cmdArgs.sublist(1),
-      workingDirectory: config.repoDirectory, runInShell: true);
+      workingDirectory: config.repoDirectory, runInShell: false);
   process.stdout
       .transform(UTF8.decoder)
       .transform(new LineSplitter())
