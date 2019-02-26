@@ -68,7 +68,7 @@ run(QueuedBuild build) async {
   for (var command in commands) {
     if (await repoShell(command, log) != 0) {
       print('Build failed!');
-      log.close();
+      log?.close();
       github.updateStatus(build.ref, 'failure', 'Failed to build', logUrl);
       return;
     }
