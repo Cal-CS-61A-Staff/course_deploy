@@ -9,6 +9,5 @@ dependencies:
   args: ^0.13.7
   crypto: ^2.0.2+1
   http_server: ^0.9.6
-  git: ^0.5.1
   github: ^3.0.2
   yaml: ^2.1.13

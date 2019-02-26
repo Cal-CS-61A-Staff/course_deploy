@@ -43,12 +43,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.14.1"
-  git:
-    description:
-      name: git
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.5.1"
   github:
     description:
       name: github
