@@ -48,14 +48,14 @@ init(DeployConfig c) {
 
 run(QueuedBuild build) async {
   var commands = [
-    'git fetch origin ${build.branch}',
-    'git checkout -f ${build.branch}',
-    'git reset --hard origin/${build.branch}',
-    config.buildScript + ' ' + (build.url == null ? 'deploy' : 'pull'),
-    'cp -r ${config.buildLocation} ${config.prDirectory}tmp',
-    'mv ${build.output} ${config.prDirectory}tmp2 || true',
-    'mv ${config.prDirectory}tmp ${build.output} || true',
-    'rm -r ${config.prDirectory}tmp2 || true'
+    ['git', 'fetch', 'origin', build.branch],
+    ['git', 'checkout', '-f', build.branch],
+    ['git', 'reset', '--hard', 'origin/${build.branch}'],
+    [config.buildScript, build.url == null ? 'deploy' : 'pull'],
+    ['cp', '-r', config.buildLocation, '${config.prDirectory}tmp'],
+    ['mv', build.output, '${config.prDirectory}tmp2', '||', 'true'],
+    ['mv', '${config.prDirectory}tmp', build.output, '||', 'true'],
+    ['rm', '-r', '${config.prDirectory}tmp2', '||', 'true']
   ];
   IOSink log;
   if (build.url != null) {
@@ -85,9 +85,9 @@ run(QueuedBuild build) async {
 
 deleteBranch(String branch) async {
   var hash = branchHash(branch);
-  await repoShell('rm -r ${config.prDirectory}$hash', null);
-  await repoShell('rm ${config.prDirectory}$hash.log', null);
-  int code = await repoShell('git branch -D $branch', null);
+  await repoShell(['rm', '-r', '${config.prDirectory}$hash'], null);
+  await repoShell(['rm', '${config.prDirectory}$hash.log'], null);
+  int code = await repoShell(['git', 'branch', '-D', branch], null);
   if (code != 0) print("Couldn't deleting branch $branch");
 }
 
@@ -100,15 +100,15 @@ queueBuild(QueuedBuild build) {
   queue.add(build);
 }
 
-repoShell(String cmd, IOSink log) async {
+repoShell(List<String> cmdArgs, IOSink log) async {
   bool catchError = false;
-  if (cmd.endsWith(' || true')) {
+  var cmd = cmdArgs.join(" ");
+  if (cmdArgs.length >= 2 && cmdArgs[cmdArgs.length - 2] == '||' && cmdArgs[cmdArgs.length - 1] == 'true') {
     catchError = true;
-    cmd = cmd.substring(0, cmd.length - 8);
+    cmdArgs = cmdArgs.sublist(0, cmdArgs.length - 2);
   }
   log?.writeln('\$ $cmd');
-  var pieces = cmd.split(' ');
-  var process = await Process.start(pieces.first, pieces.sublist(1),
+  var process = await Process.start(cmdArgs.first, cmdArgs.sublist(1),
       workingDirectory: config.repoDirectory, runInShell: true);
   process.stdout
       .transform(UTF8.decoder)
