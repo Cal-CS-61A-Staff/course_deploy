@@ -17,7 +17,7 @@ repo:
 
 build:
   domain: build.cs61a.org
-  script: /home/jathak/code/course_deploy_files/build.sh
+  script: /home/cs61a/code/course_deploy/bin/build.sh
   # After running the script, the built website should be here.
   location: /home/cs61a/course_deploy_files/repo/published/
 
