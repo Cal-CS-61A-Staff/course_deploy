@@ -48,14 +48,7 @@ init(DeployConfig c) {
 
 run(QueuedBuild build) async {
   var commands = [
-    ['git', 'fetch', 'origin', build.branch],
-    ['git', 'clean', '-q', '-d', '-f', '-x'],
-    ['git', 'checkout', '-f', build.branch],
-    ['git', 'clean', '-q', '-d', '-f', '-x'],
-    [config.buildScript, build.url == null ? 'deploy' : 'pull'],
-    ['rm', '-r', '-f', '${config.prDirectory}tmp'],
-    ['mv', build.output, '${config.prDirectory}tmp'],
-    ['mv', config.buildLocation, build.output]
+    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation]
   ];
   IOSink log;
   if (build.url != null) {
