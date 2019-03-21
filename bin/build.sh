@@ -10,13 +10,6 @@ echo "Building website..."
 
 cd /home/cs61a/course_deploy_files/repo
 
-export VIRTUAL_ENV=$PWD/env
-export PATH=$PWD/env/bin:$PATH
-
-# Install requirements
-pip install --upgrade pip
-pip install -r requirements.txt
-
 # Run checks to determine if build is allowed. Checks will be skipped if
 # the file does not exist and will be ignored if this is for a deploy build.
 test ! -e scripts/checks.sh || bash scripts/checks.sh || test $1 = "deploy"
