@@ -49,8 +49,9 @@ init(DeployConfig c) {
 run(QueuedBuild build) async {
   var commands = [
     ['git', 'fetch', 'origin', build.branch],
+    ['git', 'clean', '-q', '-d', '-f', '-x'],
     ['git', 'checkout', '-f', build.branch],
-    ['git', 'reset', '--hard', 'origin/${build.branch}'],
+    ['git', 'clean', '-q', '-d', '-f', '-x'],
     [config.buildScript, build.url == null ? 'deploy' : 'pull'],
     ['rm', '-r', '-f', '${config.prDirectory}tmp'],
     ['mv', build.output, '${config.prDirectory}tmp'],
@@ -102,6 +103,7 @@ queueBuild(QueuedBuild build) {
 repoShell(List<String> cmdArgs, IOSink log) async {
   bool catchError = false;
   var cmd = cmdArgs.join(" ");
+  stderr.writeln("\$ $cmd");
   if (cmdArgs.length >= 2 && cmdArgs[cmdArgs.length - 2] == '||' && cmdArgs[cmdArgs.length - 1] == 'true') {
     catchError = true;
     cmdArgs = cmdArgs.sublist(0, cmdArgs.length - 2);
@@ -113,12 +115,14 @@ repoShell(List<String> cmdArgs, IOSink log) async {
       .transform(UTF8.decoder)
       .transform(new LineSplitter())
       .listen((line) {
+    stdout.writeln(line);
     log?.writeln(line);
   });
   process.stderr
       .transform(UTF8.decoder)
       .transform(new LineSplitter())
       .listen((line) {
+    stderr.writeln(line);
     log?.writeln(line);
   });
   int code = await process.exitCode;
