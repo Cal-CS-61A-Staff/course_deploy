@@ -21,7 +21,9 @@ main() {
 	git checkout -q    -f --detach origin/"${branch}"
 	git clean    -q -d -f -x
 
-	make "${make_args[@]}" all && make "${make_args[@]}" all && make "${make_args[@]}" -j1 all
+	make "${make_args[@]}"     all  # NO, please do NOT attempt to simplify these lines via a loop, 'if', '&&', '||', etc.
+	make "${make_args[@]}"     all  # Turns out Bash "helpefully" ignores set -e in many compound statements and keeps going, making the script claim success.
+	make "${make_args[@]}" -j1 all  # Proof: try executing the following: (set -ex; false && false; echo "you probably do not expect this output")
 
 	rm -r -f -- "${prtmp}"
 	if [ -d "${output}" ]; then  # Don't move if it doesn't exist for some reason
