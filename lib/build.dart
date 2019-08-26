@@ -13,8 +13,10 @@ class QueuedBuild {
   String url;
   int pr;
   String ref;
+  String output2;
+  String url2;
 
-  QueuedBuild(this.branch, this.output, this.ref, [this.url, this.pr]);
+  QueuedBuild(this.branch, this.output, this.ref, [this.url, this.pr, this.output2, this.url2]);
 
   int get hashCode => branch.hashCode;
   operator ==(other) => other is QueuedBuild && branch == other.branch;
@@ -23,6 +25,7 @@ class QueuedBuild {
 StreamController<QueuedBuild> queue;
 
 var active = new Set<QueuedBuild>();
+var target2 = 'unreleased';
 
 DeployConfig config;
 
@@ -48,7 +51,7 @@ init(DeployConfig c) {
 
 run(QueuedBuild build) async {
   var commands = [
-    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation]
+    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation, target2, build.output2]
   ];
   IOSink log;
   if (build.url != null) {
@@ -70,7 +73,7 @@ run(QueuedBuild build) async {
   log?.close();
   github.updateStatus(build.ref, 'success', 'Build successful!', build.url);
   if (build.pr != null) {
-    github.makeBuildComment(build.pr, build.url);
+    github.makeBuildComment(build.pr, build.url, build.url2);
   } else {
     github.postToSlack(build.ref);
   }
@@ -78,8 +81,9 @@ run(QueuedBuild build) async {
 
 deleteBranch(String branch) async {
   var hash = branchHash(branch);
-  await repoShell(['rm', '-r', '${config.prDirectory}$hash'], null);
-  await repoShell(['rm', '${config.prDirectory}$hash.log'], null);
+  await repoShell(['rm', '-r', '${config.prDirectory}${hash}_${target2}'], null);
+  await repoShell(['rm', '-r', '${config.prDirectory}${hash}'], null);
+  await repoShell(['rm', '${config.prDirectory}${hash}.log'], null);
   int code = await repoShell(['git', 'branch', '-D', branch], null);
   if (code != 0) print("Couldn't deleting branch $branch");
 }
@@ -173,8 +177,10 @@ handleEvent(String event, String contents) {
         branch,
         '${config.prDirectory}${hash}',
         data['pull_request']['head']['sha'],
-        'http://$hash.${config.prRootDomain}',
-        data['number']));
+        'http://${hash}.${config.prRootDomain}',
+        data['number'],
+        '${config.prDirectory}${hash}_${target2}',
+        'http://${hash}_${target2}.${config.prRootDomain}'));
   } else if (event == 'pull_request' &&
       data['action'] == 'closed' &&
       data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {

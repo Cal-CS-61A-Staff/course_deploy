@@ -33,7 +33,7 @@ updateStatus(String ref, String state, String description, String url) {
         ..context = config.statusContext);
 }
 
-makeBuildComment(int number, String deployUrl) async {
+makeBuildComment(int number, String deployUrl, String unreleasedUrl) async {
   await for (IssueComment comment
       in _github.issues.listCommentsByIssue(_repo, number)) {
     if (comment.user.login == config.botUser) {
@@ -41,7 +41,7 @@ makeBuildComment(int number, String deployUrl) async {
       return;
     }
   }
-  var body = "[Build Complete!]($deployUrl) ([View Log]($deployUrl/.log)).";
+  var body = "[Build Complete!]($deployUrl) ([View Log]($deployUrl/.log)).\nFor a build including unreleased targets, [click here]($unreleasedUrl).";
   await _github.issues.createComment(_repo, number, body);
   print('Made build comment on #$number');
 }
