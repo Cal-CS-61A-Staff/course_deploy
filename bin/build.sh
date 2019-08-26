@@ -18,7 +18,7 @@ postmake() {
 }
 
 main() {
-	test "$#" -eq 6 || { 1>&2 echo "Invalid number of arguments passed." && return 1; }
+	test "$#" -eq 7 || { 1>&2 echo "Invalid number of arguments passed." && return 1; }
 
 	local make_args=(--no-print-directory -C src)
 	local target1="all"
