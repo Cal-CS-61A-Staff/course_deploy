@@ -67,7 +67,7 @@ run(QueuedBuild build) async {
     if (await repoShell(command, log) != 0) {
       print('Build failed!');
       log?.close();
-      if (build.ref) {
+      if (build.ref != null) {
         github.updateStatus(build.ref, 'failure', 'Failed to build', logUrl);
       }
       return;
@@ -75,13 +75,13 @@ run(QueuedBuild build) async {
   }
   print('Build successful!');
   log?.close();
-  if (build.ref) {
+  if (build.ref != null) {
     github.updateStatus(build.ref, 'success', 'Build successful!', build.url);
   }
   if (build.pr != null) {
     github.makeBuildComment(build.pr, build.url, build.url2);
   } else {
-    if (build.ref) {
+    if (build.ref != null) {
       github.postToSlack(build.ref);
     }
   }
