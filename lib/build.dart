@@ -60,22 +60,30 @@ run(QueuedBuild build) async {
     log = file.openWrite();
   }
   String logUrl = build.url == null ? null : build.url + '/.log';
-  github.updateStatus(build.ref, 'pending', 'Build in progress', logUrl);
+  if (build.ref != null) {
+    github.updateStatus(build.ref, 'pending', 'Build in progress', logUrl);
+  }
   for (var command in commands) {
     if (await repoShell(command, log) != 0) {
       print('Build failed!');
       log?.close();
-      github.updateStatus(build.ref, 'failure', 'Failed to build', logUrl);
+      if (build.ref) {
+        github.updateStatus(build.ref, 'failure', 'Failed to build', logUrl);
+      }
       return;
     }
   }
   print('Build successful!');
   log?.close();
-  github.updateStatus(build.ref, 'success', 'Build successful!', build.url);
+  if (build.ref) {
+    github.updateStatus(build.ref, 'success', 'Build successful!', build.url);
+  }
   if (build.pr != null) {
     github.makeBuildComment(build.pr, build.url, build.url2);
   } else {
-    github.postToSlack(build.ref);
+    if (build.ref) {
+      github.postToSlack(build.ref);
+    }
   }
 }
 
@@ -95,6 +103,15 @@ queueBuild(QueuedBuild build) {
   }
   active.add(build);
   queue.add(build);
+}
+
+queueDeployBuild(String ref) {
+    queueBuild(new QueuedBuild(
+        config.deployBranch, config.deployDirectory, ref));
+}
+
+queueDefaultDeployBuild() {
+    queueDeployBuild(null);
 }
 
 repoShell(List<String> cmdArgs, IOSink log) async {
@@ -158,8 +175,7 @@ handleEvent(String event, String contents) {
       data['ref'] == 'refs/heads/${config.deployBranch}' &&
       data['repository']['full_name'] == config.githubRepo) {
     print('Queueing deploy...');
-    queueBuild(new QueuedBuild(
-        config.deployBranch, config.deployDirectory, data['after']));
+    queueDeployBuild(data['after']);
   } else if (event == 'issue_comment' &&
       data.containsKey('pull_request') &&
       data['action'] == 'created' &&
