@@ -173,23 +173,23 @@ handle(HttpRequest request) async {
 
 handleEvent(String event, String contents) {
   var data = JSON.decode(contents);
+  var now = new DateTime.now();
   if (event == 'push' &&
       data['ref'] == 'refs/heads/${config.deployBranch}' &&
       data['repository']['full_name'] == config.githubRepo) {
-    print('Queueing deploy...');
+    print('[$now] Queueing deploy...');
     queueDeployBuild(data['after']);
   } else if (event == 'issue_comment' &&
       data.containsKey('pull_request') &&
       data['action'] == 'created' &&
       data['repository']['full_name'] == config.githubRepo &&
       data['comment']['body'].toLowercase().startsWith('stage')) {
-    print('Staging directory...');
-    print('Not yet implemented');
+    print('[$now] Staging directory... not yet implemented!');
   } else if (event == 'pull_request' &&
       (data['action'] == 'opened' || data['action'] == 'synchronize') &&
       data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {
     String branch = data['pull_request']['head']['ref'];
-    print('Queuing build for PR: $branch');
+    print('[$now] Queuing build for PR: $branch');
     String hash = branchHash(branch);
     queueBuild(new QueuedBuild(
         branch,
@@ -203,7 +203,7 @@ handleEvent(String event, String contents) {
       data['action'] == 'closed' &&
       data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {
     String branch = data['pull_request']['head']['ref'];
-    print('PR closed. Deleting $branch...');
+    print('[$now] PR closed. Deleting $branch...');
     deleteBranch(branch);
     github.editDeletedBuildComment(data['number']);
   }
