@@ -53,7 +53,7 @@ init(DeployConfig c) {
 
 run(QueuedBuild build) async {
   var commands = [
-    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation, target2, build.output2]
+    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation, target2 != null ? target2 : "", build.output2 != null ? build.output2 : ""]
   ];
   IOSink log;
   if (build.url != null) {
