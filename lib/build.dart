@@ -42,8 +42,10 @@ init(DeployConfig c) {
         } else {
           print('Skipping build for ${build.branch} ${build.ref}. Newer build queued'); 
         }
-      } catch (e) {
+      } catch (e, s) {
         print("Build for ${build.branch} ${build.ref} crashed builder (that shouldn't happen!)"); 
+        print("Exception: $e");
+        print("Stack trace: $s");
       }
     }
   });
