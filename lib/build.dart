@@ -86,6 +86,18 @@ run(QueuedBuild build) async {
     if (build.ref != null) {
       github.postToSlack(build.ref);
     }
+    notifyLiveSiteBuilt();
+  }
+}
+
+notifyLiveSiteBuilt() {
+  var subdomain = "code";
+  try {
+    var code_domain = config.buildDomain.replaceFirstMapped(new RegExp(r"^((?:(?:\w+:)?//)?)([\w\-]+)((?:\.[\w\-]+)*)"), (m) { return m.group(1) + subdomain + m.group(3); });
+    HttpClient client = new HttpClient();
+    client.postUrl(Uri.parse("https://${code_domain}/api/_async_refresh")).then((HttpClientRequest request) { return request.close(); });  // fire and forget
+  } catch (e, s) {
+    print("Failed to notify '${subdomain}' about successful build: $e");
   }
 }
 
