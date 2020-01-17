@@ -121,7 +121,8 @@ queueBuild(QueuedBuild build) {
 
 queueDeployBuild(String ref) {
     queueBuild(new QueuedBuild(
-        config.deployBranch, config.deployDirectory, ref));
+        config.deployBranch, config.deployDirectory, ref,
+        null, null, config.deploySolutionsDirectory, null));
 }
 
 queueDefaultDeployBuild() {
