@@ -40,7 +40,7 @@ main() {
 	call_make "${make_args[@]}" BUILDTYPE="${buildtype}" "${target1}"
 	postmake "${buildloc}" "${output}" "${prtmp}"
 
-	if [ "${buildtype}" = "pull" ] && [ -n "${target2}" ] && [ -n "${output2}" ]; then
+	if [ -n "${target2}" ] && [ -n "${output2}" ]; then
 		cp -a -T -- "${output}" "${buildloc}"  # Copy back the output to continue building other targets
 
 		# Check if target2 is out-of-date (but do NOT fail if it's absent) by checking if the exit code is exactly 1 (and not 2, which might mean the target is absent)
