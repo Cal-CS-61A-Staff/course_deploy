@@ -22,6 +22,8 @@ class DeployConfig {
 
   String get deployDirectory => _yaml['deploy']['directory'];
 
+  String get deploySolutionsDirectory => _yaml['deploy']['solutions_directory'];
+
   String get buildScript => _yaml['build']['script'];
 
   String get buildLocation => _end(_yaml['build']['location']);
