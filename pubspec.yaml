@@ -3,11 +3,18 @@ description: Simple build server for course websites
 author: Jen Thakar <jthakar@berkeley.edu>
 
 environment:
-  sdk: '>=1.20.1 <2.0.0'
+  sdk: '>=2.8.0 <3.0.0'
 
 dependencies:
-  args: ^0.13.7
-  crypto: ^2.0.2+1
-  http_server: ^0.9.6
-  github: ^3.0.2
-  yaml: ^2.1.13
+  args: ^1.6.0
+  crypto: ^2.1.5
+  github: ^6.2.2
+  http_server: ^0.9.8+3
+  meta: ^1.1.8
+  yaml: ^2.2.1
+
+dev_dependencies:
+  # This provides a good set of lints that enforces good style, but is less
+  # restrictive than the full `pedantic` config. 
+  sass_analysis:
+    git: {url: git://github.com/sass/dart-sass, path: analysis}

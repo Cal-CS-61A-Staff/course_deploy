@@ -1,39 +1,40 @@
-import 'dart:convert' show JSON;
+import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:course_deploy/config.dart';
 
-import 'package:github/server.dart';
+import 'package:github/github.dart';
 
 DeployConfig config;
 RepositorySlug _repo;
 
 GitHub _github;
 
-init(DeployConfig c) {
+void init(DeployConfig c) {
   config = c;
-  _github =
-      new GitHub(auth: new Authentication.withToken(config.githubAccessToken));
-  _repo = new RepositorySlug.full(config.githubRepo);
+  _github = GitHub(auth: Authentication.withToken(config.githubAccessToken));
+  _repo = RepositorySlug.full(config.githubRepo);
 }
 
-updateStatus(String ref, String state, String description, String url) {
+Future<RepositoryStatus> updateStatus(
+    String ref, String state, String description, String url) {
   if (state != 'error' &&
       state != 'pending' &&
       state != 'failure' &&
       state != 'success') {
-    throw new Exception('Bad github status state $state');
+    throw Exception('Bad github status state $state');
   }
   return _github.repositories.createStatus(
       _repo,
       ref,
-      new CreateStatus(state)
+      CreateStatus(state)
         ..description = description
         ..targetUrl = url
         ..context = config.statusContext);
 }
 
-makeBuildComment(int number, String deployUrl, String unreleasedUrl) async {
+Future<void> makeBuildComment(
+    int number, String deployUrl, String unreleasedUrl) async {
   await for (IssueComment comment
       in _github.issues.listCommentsByIssue(_repo, number)) {
     if (comment.user.login == config.botUser) {
@@ -41,37 +42,37 @@ makeBuildComment(int number, String deployUrl, String unreleasedUrl) async {
       return;
     }
   }
-  var body = "[Build Complete!]($deployUrl) ([View Log]($deployUrl/.log)).\nFor a build including unreleased targets, [click here]($unreleasedUrl).";
+  var body =
+      "[Build Complete!]($deployUrl) ([View Log]($deployUrl/.log)).\nFor a build including unreleased targets, [click here]($unreleasedUrl).";
   await _github.issues.createComment(_repo, number, body);
   print('Made build comment on #$number');
 }
 
-editDeletedBuildComment(int number) async {
+Future<void> editDeletedBuildComment(int number) async {
   await for (IssueComment comment
       in _github.issues.listCommentsByIssue(_repo, number)) {
     if (comment.user.login == config.botUser) {
       await _github.request(
           "PATCH", '/repos/${_repo.fullName}/issues/comments/${comment.id}',
-          body: JSON.encode({
+          body: json.encode({
             'body': "This PR has been closed and the build has been deleted."
           }));
     }
   }
 }
 
-postToSlack(String ref) async {
+Future<void> postToSlack(String ref) async {
   if (config.slackHook == null) return;
-  GitCommit commit = await _github.git.getCommit(_repo, ref);
+  var commit = await _github.git.getCommit(_repo, ref);
   if (commit == null) {
     print('Could not find ref $ref');
     return;
   }
-  String url = "https://github.com/${_repo.fullName}/commit/$ref";
-  String msg = "*Deploy complete!*\n<$url|`${commit.sha.substring(0, 8)}`> - " +
+  var url = "https://github.com/${_repo.fullName}/commit/$ref";
+  var msg = "*Deploy complete!*\n<$url|`${commit.sha.substring(0, 8)}`> - " +
       commit.message.split('\n').first;
-  HttpClientRequest request =
-      await new HttpClient().postUrl(Uri.parse(config.slackHook))
-        ..headers.contentType = ContentType.JSON
-        ..write(JSON.encode({'text': msg}));
+  var request = await HttpClient().postUrl(Uri.parse(config.slackHook))
+    ..headers.contentType = ContentType.json
+    ..write(json.encode({'text': msg}));
   await request.close();
 }

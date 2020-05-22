@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:github/hooks.dart';
 
 import 'package:course_deploy/config.dart';
 import 'package:course_deploy/github.dart' as github;
@@ -16,34 +17,39 @@ class QueuedBuild {
   String output2;
   String url2;
 
-  QueuedBuild(this.branch, this.output, this.ref, [this.url, this.pr, this.output2, this.url2]);
+  QueuedBuild(this.branch, this.output, this.ref,
+      [this.url, this.pr, this.output2, this.url2]);
 
   int get hashCode => branch.hashCode;
-  operator ==(other) => other is QueuedBuild && branch == other.branch;
+  bool operator ==(dynamic other) =>
+      other is QueuedBuild && branch == other.branch;
 }
 
-StreamController<QueuedBuild> queue;
+final queue = StreamController<QueuedBuild>();
+final hookHandler = HookMiddleware();
 
-var active = new Set<QueuedBuild>();
+var active = <QueuedBuild>{};
 var target2 = 'unreleased';
 
 DeployConfig config;
 
-init(DeployConfig c) {
+void init(DeployConfig c) {
   config = c;
-  queue = new StreamController<QueuedBuild>();
-  new Future(() async {
-    await for (QueuedBuild build in queue.stream) {
+  hookHandler.onEvent.listen(handleHook);
+  Future(() async {
+    await for (var build in queue.stream) {
       try {
         var activeBuild = active.lookup(build);
         if (identical(build, activeBuild)) {
           active.remove(build);
           await run(build);
         } else {
-          print('Skipping build for ${build.branch} ${build.ref}. Newer build queued'); 
+          print(
+              'Skipping build for ${build.branch} ${build.ref}. Newer build queued');
         }
       } catch (e, s) {
-        print("Build for ${build.branch} ${build.ref} crashed builder (that shouldn't happen!)"); 
+        print(
+            "Build for ${build.branch} ${build.ref} crashed builder (that shouldn't happen!)");
         print("Exception: $e");
         print("Stack trace: $s");
       }
@@ -51,17 +57,26 @@ init(DeployConfig c) {
   });
 }
 
-run(QueuedBuild build) async {
+Future<void> run(QueuedBuild build) async {
   var commands = [
-    [config.buildScript, build.url == null ? 'deploy' : 'pull', build.branch, build.output, '${config.prDirectory}tmp', config.buildLocation, target2 != null ? target2 : "", build.output2 != null ? build.output2 : ""]
+    [
+      config.buildScript,
+      build.url == null ? 'deploy' : 'pull',
+      build.branch,
+      build.output,
+      '${config.prDirectory}tmp',
+      config.buildLocation,
+      target2 ?? "",
+      build.output2 ?? ""
+    ]
   ];
   IOSink log;
   if (build.url != null) {
-    var file = new File('${build.output}.log');
+    var file = File('${build.output}.log');
     await file.create(recursive: true);
     log = file.openWrite();
   }
-  String logUrl = build.url == null ? null : build.url + '/.log';
+  var logUrl = build.url == null ? null : build.url + '/.log';
   if (build.ref != null) {
     github.updateStatus(build.ref, 'pending', 'Build in progress', logUrl);
   }
@@ -90,50 +105,63 @@ run(QueuedBuild build) async {
   }
 }
 
-notifyLiveSiteBuilt() {
+/// Notifies code.cs61a.org that the website has been built.
+///
+/// TODO(jathak): Generalize this (and probably Slack too) based on the config
+void notifyLiveSiteBuilt() {
   var subdomain = "code";
   try {
-    var code_domain = config.buildDomain.replaceFirstMapped(new RegExp(r"^((?:(?:\w+:)?//)?)([\w\-]+)((?:\.[\w\-]+)*)"), (m) { return m.group(1) + subdomain + m.group(3); });
-    HttpClient client = new HttpClient();
-    client.postUrl(Uri.parse("https://${code_domain}/api/_async_refresh")).then((HttpClientRequest request) { return request.close(); });  // fire and forget
-  } catch (e, s) {
+    var code_domain = config.buildDomain.replaceFirstMapped(
+        RegExp(r"^((?:(?:\w+:)?//)?)([\w\-]+)((?:\.[\w\-]+)*)"), (m) {
+      return m.group(1) + subdomain + m.group(3);
+    });
+    var client = HttpClient();
+    client
+        .postUrl(Uri.parse("https://${code_domain}/api/_async_refresh"))
+        .then((HttpClientRequest request) {
+      return request.close();
+    }); // fire and forget
+  } catch (e, _) {
     print("Failed to notify '${subdomain}' about successful build: $e");
   }
 }
 
-deleteBranch(String branch) async {
+/// Deletes [branch] from the cloned repo and any builds based on it.
+Future<void> deleteBranch(String branch) async {
   var hash = branchHash(branch);
-  await repoShell(['rm', '-r', '${config.prDirectory}${hash}_${target2}'], null);
+  await repoShell(
+      ['rm', '-r', '${config.prDirectory}${hash}_${target2}'], null);
   await repoShell(['rm', '-r', '${config.prDirectory}${hash}'], null);
   await repoShell(['rm', '${config.prDirectory}${hash}.log'], null);
-  int code = await repoShell(['git', 'branch', '-D', branch], null);
-  if (code != 0) print("Couldn't deleting branch $branch");
+  var code = await repoShell(['git', 'branch', '-D', branch], null);
+  if (code != 0) print("Couldn't delete branch $branch");
 }
 
-queueBuild(QueuedBuild build) {
-  while(active.contains(build)) {
-    print('Deactivating existing queued build for branch ${build.branch} ${build.ref}');
+/// Queues [build] to be built.
+void queueBuild(QueuedBuild build) {
+  while (active.contains(build)) {
+    print(
+        'Deactivating existing queued build for branch ${build.branch} ${build.ref}');
     active.remove(build);
   }
   active.add(build);
   queue.add(build);
 }
 
-queueDeployBuild(String ref) {
-    queueBuild(new QueuedBuild(
-        config.deployBranch, config.deployDirectory, ref,
-        null, null, config.deploySolutionsDirectory, null));
+/// Queues a deploy of the main branch.
+void queueDeployBuild(String ref) {
+  queueBuild(QueuedBuild(config.deployBranch, config.deployDirectory, ref, null,
+      null, config.deploySolutionsDirectory, null));
 }
 
-queueDefaultDeployBuild() {
-    queueDeployBuild(null);
-}
-
-repoShell(List<String> cmdArgs, IOSink log) async {
-  bool catchError = false;
+/// Runs a shell command from within the repo.
+Future<int> repoShell(List<String> cmdArgs, IOSink log) async {
+  var catchError = false;
   var cmd = cmdArgs.join(" ");
   stderr.writeln("\$ $cmd");
-  if (cmdArgs.length >= 2 && cmdArgs[cmdArgs.length - 2] == '||' && cmdArgs[cmdArgs.length - 1] == 'true') {
+  if (cmdArgs.length >= 2 &&
+      cmdArgs[cmdArgs.length - 2] == '||' &&
+      cmdArgs[cmdArgs.length - 1] == 'true') {
     catchError = true;
     cmdArgs = cmdArgs.sublist(0, cmdArgs.length - 2);
   }
@@ -141,103 +169,64 @@ repoShell(List<String> cmdArgs, IOSink log) async {
   var process = await Process.start(cmdArgs.first, cmdArgs.sublist(1),
       workingDirectory: config.repoDirectory, runInShell: false);
   process.stdout
-      .transform(UTF8.decoder)
-      .transform(new LineSplitter())
+      .transform(utf8.decoder)
+      .transform(LineSplitter())
       .listen((line) {
     stdout.writeln(line);
     log?.writeln(line);
   });
   process.stderr
-      .transform(UTF8.decoder)
-      .transform(new LineSplitter())
+      .transform(utf8.decoder)
+      .transform(LineSplitter())
       .listen((line) {
     stderr.writeln(line);
     log?.writeln(line);
   });
-  int code = await process.exitCode;
+  var code = await process.exitCode;
   return catchError ? 0 : code;
 }
 
-handle(HttpRequest request) async {
-  if (request.method == 'POST' && request.uri.path == '/event') {
-    var data = await request.reduce((a, b) => []..addAll(a)..addAll(b));
-    var events = request.headers['X-Github-Event'];
-    var signatures = request.headers['X-Hub-Signature'];
-    if (events.length > 0) {
-      try {
-        if (!validatePayload(data, signatures.last)) {
-          request.response.statusCode = 403;
-          request.response.writeln('Invalid payload signature');
-          request.response.close();
-          return;
-        }
-        handleEvent(events.last, new String.fromCharCodes(data));
-        request.response.writeln('Ok');
-        request.response.close();
+/// Handls an HTTP request to the builder.
+void handle(HttpRequest request) => hookHandler.handleHookRequest(request);
+
+/// Handles a webhook from GitHub.
+void handleHook(HookEvent hook) {
+  var now = DateTime.now();
+  if (hook is UnknownHookEvent &&
+      hook.event == 'push' &&
+      hook.data['ref'] == 'refs/heads/${config.deployBranch}' &&
+      hook.data['repository']['full_name'] == config.githubRepo) {
+    print('[$now] Queuing deploy...');
+    queueDeployBuild(hook.data['after'] as String);
+  }
+  if (hook is PullRequestEvent &&
+      hook.repository.fullName == config.githubRepo) {
+    var branch = hook.pullRequest.head.ref;
+    switch (hook.action) {
+      case 'opened':
+      case 'synchronize':
+        print('[$now] Queuing build for PR: $branch');
+        var hash = branchHash(branch);
+        queueBuild(QueuedBuild(
+            branch,
+            '${config.prDirectory}$hash',
+            hook.pullRequest.head.sha,
+            'http://$hash.${config.prRootDomain}',
+            hook.number,
+            '${config.prDirectory}${hash}_$target2',
+            'http://${hash}_$target2.${config.prRootDomain}'));
         return;
-      } on Exception catch (e) {
-        print(e);
-      }
+      case 'closed':
+        print('[$now] PR closed. Deleting $branch...');
+        deleteBranch(branch);
+        github.editDeletedBuildComment(hook.number);
+        return;
+      default:
+        return;
     }
   }
-  request.response.statusCode = 404;
-  request.response.close();
-}
-
-handleEvent(String event, String contents) {
-  var data = JSON.decode(contents);
-  var now = new DateTime.now();
-  if (event == 'push' &&
-      data['ref'] == 'refs/heads/${config.deployBranch}' &&
-      data['repository']['full_name'] == config.githubRepo) {
-    print('[$now] Queueing deploy...');
-    queueDeployBuild(data['after']);
-  } else if (event == 'issue_comment' &&
-      data.containsKey('pull_request') &&
-      data['action'] == 'created' &&
-      data['repository']['full_name'] == config.githubRepo &&
-      data['comment']['body'].toLowercase().startsWith('stage')) {
-    print('[$now] Staging directory... not yet implemented!');
-  } else if (event == 'pull_request' &&
-      (data['action'] == 'opened' || data['action'] == 'synchronize') &&
-      data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {
-    String branch = data['pull_request']['head']['ref'];
-    print('[$now] Queuing build for PR: $branch');
-    String hash = branchHash(branch);
-    queueBuild(new QueuedBuild(
-        branch,
-        '${config.prDirectory}${hash}',
-        data['pull_request']['head']['sha'],
-        'http://${hash}.${config.prRootDomain}',
-        data['number'],
-        '${config.prDirectory}${hash}_${target2}',
-        'http://${hash}_${target2}.${config.prRootDomain}'));
-  } else if (event == 'pull_request' &&
-      data['action'] == 'closed' &&
-      data['pull_request']['head']['repo']['full_name'] == config.githubRepo) {
-    String branch = data['pull_request']['head']['ref'];
-    print('[$now] PR closed. Deleting $branch...');
-    deleteBranch(branch);
-    github.editDeletedBuildComment(data['number']);
-  }
-}
-
-bool validatePayload(List<int> data, String signature) {
-  var hmac = new Hmac(sha1, UTF8.encode(config.webhookSecret));
-  return secureCompare('sha1=' + hmac.convert(data).toString(), signature);
 }
 
 String branchHash(String branch) {
-  return sha1.convert(UTF8.encode(branch)).toString().substring(0, 12);
-}
-
-// from https://stackoverflow.com/questions/27006687/dart-constant-time-string-comparison
-bool secureCompare(String a, String b) {
-  if (a.codeUnits.length != b.codeUnits.length) return false;
-
-  var r = 0;
-  for (int i = 0; i < a.codeUnits.length; i++) {
-    r |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
-  }
-  return r == 0;
+  return sha1.convert(utf8.encode(branch)).toString().substring(0, 12);
 }
