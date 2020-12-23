@@ -16,3 +16,6 @@ the PR subdomains. The deployed site is hosted by Caddy.
 If for some reason you need to restart the build server manually, run:
 
     sudo service course_deploy restart
+
+# Note for 61A
+This repo has been superceded by the buildserver at https://github.com/Cal-CS-61A-Staff/cs61a-apps/, and is no longer used by us.
